@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "934417318852",
+    "project_id": "drivesafe-e8ff1",
+    "storage_bucket": "drivesafe-e8ff1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:934417318852:android:34c476dc87f40499d0da91",
+        "android_client_info": {
+          "package_name": "com.rmas.drivesafe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB4NvzOz8unvYRkVD_vBI3zZBWMkoHwj-c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

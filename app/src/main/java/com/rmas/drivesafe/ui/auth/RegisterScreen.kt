@@ -141,7 +141,13 @@ fun RegisterScreen(
                     email.isBlank() -> localError = "Unesite email"
                     password.length < 6 -> localError = "Lozinka mora imati najmanje 6 karaktera"
                     password != confirmPassword -> localError = "Lozinke se ne poklapaju"
-                    else -> authViewModel.register(email, password)
+                    else -> authViewModel.register(
+                        email = email,
+                        password = password,
+                        fullName = fullName,
+                        username = username,
+                        phone = phone
+                    )
                 }
             },
             modifier = Modifier.fillMaxWidth(),

@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.rmas.drivesafe.ui.auth.LoginScreen
+import com.rmas.drivesafe.ui.auth.RegisterScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -31,7 +32,7 @@ fun AppNavigation() {
             LoginScreen(navController)
         }
         composable(Screen.Register.route) {
-            // RegisterScreen(navController)
+            RegisterScreen(navController)
         }
         composable(Screen.Map.route) {
             // MapScreen(navController)

@@ -12,6 +12,7 @@ import com.rmas.drivesafe.ui.map.MapScreen
 import com.rmas.drivesafe.ui.objects.AddObjectScreen
 import com.rmas.drivesafe.ui.objects.ObjectDetailScreen
 import com.rmas.drivesafe.ui.objects.ObjectListScreen
+import com.rmas.drivesafe.ui.leaderboard.LeaderboardScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -49,7 +50,7 @@ fun AppNavigation() {
             ObjectListScreen(navController)
         }
         composable(Screen.Leaderboard.route) {
-            // LeaderboardScreen(navController)
+            LeaderboardScreen(navController)
         }
         composable(Screen.Profile.route) {
             // ProfileScreen(navController)

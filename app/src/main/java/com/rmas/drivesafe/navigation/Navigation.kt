@@ -1,18 +1,20 @@
 package com.rmas.drivesafe.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.rmas.drivesafe.ui.auth.LoginScreen
 import com.rmas.drivesafe.ui.auth.RegisterScreen
+import com.rmas.drivesafe.ui.leaderboard.LeaderboardScreen
 import com.rmas.drivesafe.ui.map.MapScreen
 import com.rmas.drivesafe.ui.objects.AddObjectScreen
 import com.rmas.drivesafe.ui.objects.ObjectDetailScreen
 import com.rmas.drivesafe.ui.objects.ObjectListScreen
-import com.rmas.drivesafe.ui.leaderboard.LeaderboardScreen
+import com.rmas.drivesafe.ui.profile.ProfileScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -30,12 +32,14 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun AppNavigation() {
-    val navController = rememberNavController()
-
+fun AppNavigation(
+    navController: NavHostController,
+    modifier: Modifier = Modifier
+) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route
+        startDestination = Screen.Login.route,
+        modifier = modifier
     ) {
         composable(Screen.Login.route) {
             LoginScreen(navController)
@@ -53,7 +57,7 @@ fun AppNavigation() {
             LeaderboardScreen(navController)
         }
         composable(Screen.Profile.route) {
-            // ProfileScreen(navController)
+            ProfileScreen(navController)
         }
         composable(
             route = Screen.AddObject.route,

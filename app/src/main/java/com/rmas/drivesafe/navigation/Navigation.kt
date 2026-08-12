@@ -10,6 +10,8 @@ import com.rmas.drivesafe.ui.auth.LoginScreen
 import com.rmas.drivesafe.ui.auth.RegisterScreen
 import com.rmas.drivesafe.ui.map.MapScreen
 import com.rmas.drivesafe.ui.objects.AddObjectScreen
+import com.rmas.drivesafe.ui.objects.ObjectDetailScreen
+import com.rmas.drivesafe.ui.objects.ObjectListScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -44,7 +46,7 @@ fun AppNavigation() {
             MapScreen(navController)
         }
         composable(Screen.ObjectList.route) {
-            // ObjectListScreen(navController)
+            ObjectListScreen(navController)
         }
         composable(Screen.Leaderboard.route) {
             // LeaderboardScreen(navController)
@@ -69,8 +71,14 @@ fun AppNavigation() {
             val lng = backStackEntry.arguments?.getFloat("lng")?.toDouble() ?: 21.8954
             AddObjectScreen(navController, latitude = lat, longitude = lng)
         }
-        composable(Screen.ObjectDetail.route) {
-            // ObjectDetailScreen(navController)
+        composable(
+            route = Screen.ObjectDetail.route,
+            arguments = listOf(
+                navArgument("objectId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val objectId = backStackEntry.arguments?.getString("objectId") ?: ""
+            ObjectDetailScreen(navController, objectId = objectId)
         }
     }
 }

@@ -1,12 +1,15 @@
 package com.rmas.drivesafe.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.rmas.drivesafe.ui.auth.LoginScreen
 import com.rmas.drivesafe.ui.auth.RegisterScreen
 import com.rmas.drivesafe.ui.map.MapScreen
+import com.rmas.drivesafe.ui.objects.AddObjectScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -15,7 +18,9 @@ sealed class Screen(val route: String) {
     object ObjectList : Screen("object_list")
     object Leaderboard : Screen("leaderboard")
     object Profile : Screen("profile")
-    object AddObject : Screen("add_object")
+    object AddObject : Screen("add_object?lat={lat}&lng={lng}") {
+        fun createRoute(lat: Double, lng: Double) = "add_object?lat=$lat&lng=$lng"
+    }
     object ObjectDetail : Screen("object_detail/{objectId}") {
         fun createRoute(objectId: String) = "object_detail/$objectId"
     }
@@ -47,8 +52,22 @@ fun AppNavigation() {
         composable(Screen.Profile.route) {
             // ProfileScreen(navController)
         }
-        composable(Screen.AddObject.route) {
-            // AddObjectScreen(navController)
+        composable(
+            route = Screen.AddObject.route,
+            arguments = listOf(
+                navArgument("lat") {
+                    type = NavType.FloatType
+                    defaultValue = 43.3209f
+                },
+                navArgument("lng") {
+                    type = NavType.FloatType
+                    defaultValue = 21.8954f
+                }
+            )
+        ) { backStackEntry ->
+            val lat = backStackEntry.arguments?.getFloat("lat")?.toDouble() ?: 43.3209
+            val lng = backStackEntry.arguments?.getFloat("lng")?.toDouble() ?: 21.8954
+            AddObjectScreen(navController, latitude = lat, longitude = lng)
         }
         composable(Screen.ObjectDetail.route) {
             // ObjectDetailScreen(navController)

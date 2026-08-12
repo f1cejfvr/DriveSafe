@@ -16,6 +16,7 @@ import androidx.navigation.NavController
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import com.rmas.drivesafe.navigation.Screen
 import com.rmas.drivesafe.service.LocationService
 
 @Composable
@@ -93,7 +94,11 @@ fun MapScreen(navController: NavController) {
         }
 
         FloatingActionButton(
-            onClick = { },
+            onClick = {
+                val lat = currentLocation?.latitude ?: 43.3209
+                val lng = currentLocation?.longitude ?: 21.8954
+                navController.navigate("add_object?lat=$lat&lng=$lng")
+            },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)

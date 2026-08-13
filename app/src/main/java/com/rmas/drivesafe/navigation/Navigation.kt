@@ -7,6 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.google.firebase.auth.FirebaseAuth
 import com.rmas.drivesafe.ui.auth.LoginScreen
 import com.rmas.drivesafe.ui.auth.RegisterScreen
 import com.rmas.drivesafe.ui.leaderboard.LeaderboardScreen
@@ -36,9 +37,15 @@ fun AppNavigation(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
+    val startDestination = if (FirebaseAuth.getInstance().currentUser != null) {
+        Screen.Map.route
+    } else {
+        Screen.Login.route
+    }
+
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route,
+        startDestination = startDestination,
         modifier = modifier
     ) {
         composable(Screen.Login.route) {

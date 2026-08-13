@@ -16,14 +16,32 @@ import androidx.navigation.NavController
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
-import com.rmas.drivesafe.navigation.Screen
+import com.rmas.drivesafe.model.MapObject
+import com.rmas.drivesafe.repository.ObjectRepository
 import com.rmas.drivesafe.service.LocationService
+import com.rmas.drivesafe.service.NotificationService
+import kotlin.math.*
+
+fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    val r = 6371000.0
+    val phi1 = Math.toRadians(lat1)
+    val phi2 = Math.toRadians(lat2)
+    val dphi = Math.toRadians(lat2 - lat1)
+    val dlambda = Math.toRadians(lon2 - lon1)
+    val a = sin(dphi / 2).pow(2) + cos(phi1) * cos(phi2) * sin(dlambda / 2).pow(2)
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return r * c
+}
 
 @Composable
 fun MapScreen(navController: NavController) {
     val context = LocalContext.current
     val locationService = remember { LocationService(context) }
+    val objectRepository = remember { ObjectRepository() }
     val currentLocation by locationService.currentLocation.collectAsState()
+
+    var objects by remember { mutableStateOf<List<MapObject>>(emptyList()) }
+    var notifiedObjects by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     var hasLocationPermission by remember {
         mutableStateOf(
@@ -53,6 +71,29 @@ fun MapScreen(navController: NavController) {
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 )
             )
+        }
+        val result = objectRepository.getAllObjects()
+        if (result.isSuccess) {
+            objects = result.getOrNull() ?: emptyList()
+        }
+    }
+
+    LaunchedEffect(currentLocation) {
+        currentLocation?.let { location ->
+            objects.forEach { obj ->
+                val distance = calculateDistance(
+                    location.latitude, location.longitude,
+                    obj.latitude, obj.longitude
+                )
+                if (distance < 200 && !notifiedObjects.contains(obj.id)) {
+                    NotificationService.showLocalNotification(
+                        context,
+                        "Objekat u blizini!",
+                        "${obj.title} je na ${distance.toInt()}m od vas"
+                    )
+                    notifiedObjects = notifiedObjects + obj.id
+                }
+            }
         }
     }
 
@@ -89,6 +130,15 @@ fun MapScreen(navController: NavController) {
                 Marker(
                     state = MarkerState(position = it),
                     title = "Moja lokacija"
+                )
+            }
+            objects.forEach { obj ->
+                Marker(
+                    state = MarkerState(
+                        position = LatLng(obj.latitude, obj.longitude)
+                    ),
+                    title = obj.title,
+                    snippet = obj.type
                 )
             }
         }

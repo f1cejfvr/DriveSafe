@@ -4,29 +4,41 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.rmas.drivesafe.model.MapObject
 import com.rmas.drivesafe.navigation.Screen
 import com.rmas.drivesafe.repository.ObjectRepository
+import com.rmas.drivesafe.service.LocationService
+import com.rmas.drivesafe.ui.map.calculateDistance
 
 @Composable
 fun ObjectListScreen(navController: NavController) {
+    val context = LocalContext.current
     val objectRepository = remember { ObjectRepository() }
+    val locationService = remember { LocationService(context) }
+    val currentLocation by locationService.currentLocation.collectAsState()
+
     var objects by remember { mutableStateOf<List<MapObject>>(emptyList()) }
     var filteredObjects by remember { mutableStateOf<List<MapObject>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var selectedType by remember { mutableStateOf("SVE") }
     var searchQuery by remember { mutableStateOf("") }
+    var radiusInput by remember { mutableStateOf("") }
+    var useRadius by remember { mutableStateOf(false) }
 
     val types = listOf("SVE", "EMERGENCY", "DANGER", "PARKING")
 
     LaunchedEffect(Unit) {
+        locationService.startTracking()
         val result = objectRepository.getAllObjects()
         if (result.isSuccess) {
             objects = result.getOrNull() ?: emptyList()
@@ -35,13 +47,25 @@ fun ObjectListScreen(navController: NavController) {
         isLoading = false
     }
 
-    LaunchedEffect(selectedType, searchQuery) {
+    DisposableEffect(Unit) {
+        onDispose { locationService.stopTracking() }
+    }
+
+    LaunchedEffect(selectedType, searchQuery, useRadius, radiusInput, currentLocation) {
         filteredObjects = objects.filter { obj ->
             val typeMatch = selectedType == "SVE" || obj.type == selectedType
             val searchMatch = searchQuery.isEmpty() ||
                     obj.title.contains(searchQuery, ignoreCase = true) ||
                     obj.description.contains(searchQuery, ignoreCase = true)
-            typeMatch && searchMatch
+            val radiusMatch = if (useRadius && currentLocation != null && radiusInput.isNotEmpty()) {
+                val radius = radiusInput.toDoubleOrNull() ?: Double.MAX_VALUE
+                val distance = calculateDistance(
+                    currentLocation!!.latitude, currentLocation!!.longitude,
+                    obj.latitude, obj.longitude
+                )
+                distance <= radius
+            } else true
+            typeMatch && searchMatch && radiusMatch
         }
     }
 
@@ -58,6 +82,25 @@ fun ObjectListScreen(navController: NavController) {
             label = { Text("Pretrazi") },
             modifier = Modifier.fillMaxWidth()
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = radiusInput,
+                onValueChange = { radiusInput = it },
+                label = { Text("Radijus (m)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f)
+            )
+            Switch(
+                checked = useRadius,
+                onCheckedChange = { useRadius = it }
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -130,7 +173,7 @@ fun ObjectCard(obj: MapObject, onClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Ocena: ${String.format(java.util.Locale.getDefault(),"%.1f", obj.rating)} (${obj.ratingCount})",
+                text = "Ocena: ${String.format(java.util.Locale.getDefault(), "%.1f", obj.rating)} (${obj.ratingCount})",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

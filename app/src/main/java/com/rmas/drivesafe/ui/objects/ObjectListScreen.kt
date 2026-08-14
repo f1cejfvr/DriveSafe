@@ -19,6 +19,7 @@ import com.rmas.drivesafe.navigation.Screen
 import com.rmas.drivesafe.repository.ObjectRepository
 import com.rmas.drivesafe.service.LocationService
 import com.rmas.drivesafe.ui.map.calculateDistance
+import java.util.Calendar
 
 @Composable
 fun ObjectListScreen(navController: NavController) {
@@ -34,8 +35,10 @@ fun ObjectListScreen(navController: NavController) {
     var searchQuery by remember { mutableStateOf("") }
     var radiusInput by remember { mutableStateOf("") }
     var useRadius by remember { mutableStateOf(false) }
+    var selectedDateFilter by remember { mutableStateOf("SVE") }
 
     val types = listOf("SVE", "EMERGENCY", "DANGER", "PARKING")
+    val dateFilters = listOf("SVE", "Danas", "7 dana", "30 dana")
 
     LaunchedEffect(Unit) {
         locationService.startTracking()
@@ -51,7 +54,7 @@ fun ObjectListScreen(navController: NavController) {
         onDispose { locationService.stopTracking() }
     }
 
-    LaunchedEffect(selectedType, searchQuery, useRadius, radiusInput, currentLocation) {
+    LaunchedEffect(selectedType, searchQuery, useRadius, radiusInput, currentLocation, selectedDateFilter) {
         filteredObjects = objects.filter { obj ->
             val typeMatch = selectedType == "SVE" || obj.type == selectedType
             val searchMatch = searchQuery.isEmpty() ||
@@ -65,7 +68,18 @@ fun ObjectListScreen(navController: NavController) {
                 )
                 distance <= radius
             } else true
-            typeMatch && searchMatch && radiusMatch
+            val dateMatch = if (selectedDateFilter == "SVE" || obj.createdAt == null) {
+                true
+            } else {
+                val calendar = Calendar.getInstance()
+                when (selectedDateFilter) {
+                    "Danas" -> calendar.add(Calendar.DAY_OF_YEAR, -1)
+                    "7 dana" -> calendar.add(Calendar.DAY_OF_YEAR, -7)
+                    "30 dana" -> calendar.add(Calendar.DAY_OF_YEAR, -30)
+                }
+                obj.createdAt.after(calendar.time)
+            }
+            typeMatch && searchMatch && radiusMatch && dateMatch
         }
     }
 
@@ -113,6 +127,21 @@ fun ObjectListScreen(navController: NavController) {
                     selected = selectedType == type,
                     onClick = { selectedType = type },
                     label = { Text(type, fontSize = 10.sp) }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            dateFilters.forEach { filter ->
+                FilterChip(
+                    selected = selectedDateFilter == filter,
+                    onClick = { selectedDateFilter = filter },
+                    label = { Text(filter, fontSize = 10.sp) }
                 )
             }
         }

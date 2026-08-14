@@ -1,6 +1,7 @@
 package com.rmas.drivesafe.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.rmas.drivesafe.model.User
 import kotlinx.coroutines.tasks.await
 
@@ -31,9 +32,29 @@ class UserRepository {
         }
     }
 
-    suspend fun updateUserPoints(userId: String, points: Int): Result<Unit> {
+    suspend fun updateUserPoints(userId: String, pointsToAdd: Int): Result<Unit> {
         return try {
-            usersCollection.document(userId).update("points", points).await()
+            val userDoc = usersCollection.document(userId).get().await()
+            val currentPoints = userDoc.getLong("points")?.toInt() ?: 0
+            val newPoints = currentPoints + pointsToAdd
+            usersCollection.document(userId).update("points", newPoints).await()
+            updateUserRank(userId, newPoints)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateUserRank(userId: String, points: Int): Result<Unit> {
+        return try {
+            val rank = when {
+                points >= 200 -> "Expert"
+                points >= 100 -> "Napredni"
+                points >= 50 -> "Srednji"
+                points >= 20 -> "Pocetnik+"
+                else -> "Pocetnik"
+            }
+            usersCollection.document(userId).update("rank", rank).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -43,7 +64,7 @@ class UserRepository {
     suspend fun getAllUsers(): Result<List<User>> {
         return try {
             val snapshot = usersCollection
-                .orderBy("points", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .orderBy("points", Query.Direction.DESCENDING)
                 .get()
                 .await()
             val users = snapshot.toObjects(User::class.java)

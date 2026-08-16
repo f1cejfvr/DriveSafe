@@ -24,7 +24,9 @@ import com.rmas.drivesafe.repository.ObjectRepository
 import com.rmas.drivesafe.service.LocationService
 import com.rmas.drivesafe.ui.map.calculateDistance
 import java.util.Calendar
+import java.util.Date
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ObjectListScreen(navController: NavController) {
     val context = LocalContext.current
@@ -47,8 +49,16 @@ fun ObjectListScreen(navController: NavController) {
     var selectedServiceType by remember { mutableStateOf("SVE") }
     var selectedParkingType by remember { mutableStateOf("SVE") }
 
+    var startDate by remember { mutableStateOf<Date?>(null) }
+    var endDate by remember { mutableStateOf<Date?>(null) }
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
+
+    val startDatePickerState = rememberDatePickerState()
+    val endDatePickerState = rememberDatePickerState()
+
     val types = listOf("SVE", "EMERGENCY", "DANGER", "PARKING")
-    val dateFilters = listOf("SVE", "Danas", "7 dana", "30 dana")
+    val dateFilters = listOf("SVE", "Danas", "7 dana", "30 dana", "Custom")
     val serviceTypes = listOf("SVE", "HOSPITAL", "POLICE", "FIRE", "CAR_SERVICE")
     val parkingTypes = listOf("SVE", "FREE", "PAID", "GARAGE")
     val dangerLevels = listOf(0, 1, 2, 3, 4, 5)
@@ -70,7 +80,7 @@ fun ObjectListScreen(navController: NavController) {
     LaunchedEffect(
         selectedType, searchQuery, useRadius, radiusInput, currentLocation,
         selectedDateFilter, filterByAuthor, selectedDangerLevel,
-        selectedServiceType, selectedParkingType
+        selectedServiceType, selectedParkingType, startDate, endDate
     ) {
         filteredObjects = objects.filter { obj ->
             val typeMatch = selectedType == "SVE" || obj.type == selectedType
@@ -85,16 +95,27 @@ fun ObjectListScreen(navController: NavController) {
                 )
                 distance <= radius
             } else true
-            val dateMatch = if (selectedDateFilter == "SVE" || obj.createdAt == null) {
-                true
-            } else {
-                val calendar = Calendar.getInstance()
-                when (selectedDateFilter) {
-                    "Danas" -> calendar.add(Calendar.DAY_OF_YEAR, -1)
-                    "7 dana" -> calendar.add(Calendar.DAY_OF_YEAR, -7)
-                    "30 dana" -> calendar.add(Calendar.DAY_OF_YEAR, -30)
+            val dateMatch = when {
+                selectedDateFilter == "SVE" || obj.createdAt == null -> true
+                selectedDateFilter == "Custom" -> {
+                    val start = startDate
+                    val end = endDate
+                    when {
+                        start != null && end != null -> obj.createdAt.after(start) && obj.createdAt.before(end)
+                        start != null -> obj.createdAt.after(start)
+                        end != null -> obj.createdAt.before(end)
+                        else -> true
+                    }
                 }
-                obj.createdAt.after(calendar.time)
+                else -> {
+                    val calendar = Calendar.getInstance()
+                    when (selectedDateFilter) {
+                        "Danas" -> calendar.add(Calendar.DAY_OF_YEAR, -1)
+                        "7 dana" -> calendar.add(Calendar.DAY_OF_YEAR, -7)
+                        "30 dana" -> calendar.add(Calendar.DAY_OF_YEAR, -30)
+                    }
+                    obj.createdAt.after(calendar.time)
+                }
             }
             val authorMatch = if (filterByAuthor) obj.authorId == currentUserId else true
             val attrMatch = when (obj.type) {
@@ -104,6 +125,44 @@ fun ObjectListScreen(navController: NavController) {
                 else -> true
             }
             typeMatch && searchMatch && radiusMatch && dateMatch && authorMatch && attrMatch
+        }
+    }
+
+    if (showStartDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showStartDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    startDatePickerState.selectedDateMillis?.let {
+                        startDate = Date(it)
+                    }
+                    showStartDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStartDatePicker = false }) { Text("Otkazi") }
+            }
+        ) {
+            DatePicker(state = startDatePickerState)
+        }
+    }
+
+    if (showEndDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showEndDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    endDatePickerState.selectedDateMillis?.let {
+                        endDate = Date(it)
+                    }
+                    showEndDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEndDatePicker = false }) { Text("Otkazi") }
+            }
+        ) {
+            DatePicker(state = endDatePickerState)
         }
     }
 
@@ -197,6 +256,33 @@ fun ObjectListScreen(navController: NavController) {
                     onClick = { selectedDateFilter = filter },
                     label = { Text(filter, fontSize = 10.sp) }
                 )
+            }
+        }
+
+        if (selectedDateFilter == "Custom") {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { showStartDatePicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = if (startDate != null) android.text.format.DateFormat.format("dd.MM.yyyy", startDate).toString() else "Od datuma",
+                        fontSize = 12.sp
+                    )
+                }
+                OutlinedButton(
+                    onClick = { showEndDatePicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = if (endDate != null) android.text.format.DateFormat.format("dd.MM.yyyy", endDate).toString() else "Do datuma",
+                        fontSize = 12.sp
+                    )
+                }
             }
         }
 

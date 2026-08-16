@@ -1,19 +1,23 @@
 package com.rmas.drivesafe.ui.objects
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
 import com.rmas.drivesafe.model.MapObject
 import com.rmas.drivesafe.navigation.Screen
 import com.rmas.drivesafe.repository.ObjectRepository
@@ -27,6 +31,7 @@ fun ObjectListScreen(navController: NavController) {
     val objectRepository = remember { ObjectRepository() }
     val locationService = remember { LocationService(context) }
     val currentLocation by locationService.currentLocation.collectAsState()
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     var objects by remember { mutableStateOf<List<MapObject>>(emptyList()) }
     var filteredObjects by remember { mutableStateOf<List<MapObject>>(emptyList()) }
@@ -36,9 +41,17 @@ fun ObjectListScreen(navController: NavController) {
     var radiusInput by remember { mutableStateOf("") }
     var useRadius by remember { mutableStateOf(false) }
     var selectedDateFilter by remember { mutableStateOf("SVE") }
+    var filterByAuthor by remember { mutableStateOf(false) }
+    var showTable by remember { mutableStateOf(false) }
+    var selectedDangerLevel by remember { mutableIntStateOf(0) }
+    var selectedServiceType by remember { mutableStateOf("SVE") }
+    var selectedParkingType by remember { mutableStateOf("SVE") }
 
     val types = listOf("SVE", "EMERGENCY", "DANGER", "PARKING")
     val dateFilters = listOf("SVE", "Danas", "7 dana", "30 dana")
+    val serviceTypes = listOf("SVE", "HOSPITAL", "POLICE", "FIRE", "CAR_SERVICE")
+    val parkingTypes = listOf("SVE", "FREE", "PAID", "GARAGE")
+    val dangerLevels = listOf(0, 1, 2, 3, 4, 5)
 
     LaunchedEffect(Unit) {
         locationService.startTracking()
@@ -54,7 +67,11 @@ fun ObjectListScreen(navController: NavController) {
         onDispose { locationService.stopTracking() }
     }
 
-    LaunchedEffect(selectedType, searchQuery, useRadius, radiusInput, currentLocation, selectedDateFilter) {
+    LaunchedEffect(
+        selectedType, searchQuery, useRadius, radiusInput, currentLocation,
+        selectedDateFilter, filterByAuthor, selectedDangerLevel,
+        selectedServiceType, selectedParkingType
+    ) {
         filteredObjects = objects.filter { obj ->
             val typeMatch = selectedType == "SVE" || obj.type == selectedType
             val searchMatch = searchQuery.isEmpty() ||
@@ -79,16 +96,35 @@ fun ObjectListScreen(navController: NavController) {
                 }
                 obj.createdAt.after(calendar.time)
             }
-            typeMatch && searchMatch && radiusMatch && dateMatch
+            val authorMatch = if (filterByAuthor) obj.authorId == currentUserId else true
+            val attrMatch = when (obj.type) {
+                "DANGER" -> selectedDangerLevel == 0 || obj.dangerLevel == selectedDangerLevel
+                "EMERGENCY" -> selectedServiceType == "SVE" || obj.serviceType == selectedServiceType
+                "PARKING" -> selectedParkingType == "SVE" || obj.parkingType == selectedParkingType
+                else -> true
+            }
+            typeMatch && searchMatch && radiusMatch && dateMatch && authorMatch && attrMatch
         }
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(
-            text = "Objekti",
-            fontSize = 24.sp,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "Objekti", fontSize = 24.sp)
+            Row {
+                TextButton(onClick = { showTable = false }) {
+                    Text("Lista", color = if (!showTable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                }
+                TextButton(onClick = { showTable = true }) {
+                    Text("Tabela", color = if (showTable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = searchQuery,
@@ -120,6 +156,22 @@ fun ObjectListScreen(navController: NavController) {
 
         Row(
             modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Samo moji objekti", fontSize = 14.sp)
+            Switch(
+                checked = filterByAuthor,
+                onCheckedChange = { filterByAuthor = it }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             types.forEach { type ->
@@ -134,7 +186,9 @@ fun ObjectListScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             dateFilters.forEach { filter ->
@@ -143,6 +197,63 @@ fun ObjectListScreen(navController: NavController) {
                     onClick = { selectedDateFilter = filter },
                     label = { Text(filter, fontSize = 10.sp) }
                 )
+            }
+        }
+
+        if (selectedType == "DANGER") {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Nivo opasnosti:", fontSize = 12.sp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                dangerLevels.forEach { level ->
+                    FilterChip(
+                        selected = selectedDangerLevel == level,
+                        onClick = { selectedDangerLevel = level },
+                        label = { Text(if (level == 0) "SVE" else level.toString(), fontSize = 10.sp) }
+                    )
+                }
+            }
+        }
+
+        if (selectedType == "EMERGENCY") {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Tip servisa:", fontSize = 12.sp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                serviceTypes.forEach { type ->
+                    FilterChip(
+                        selected = selectedServiceType == type,
+                        onClick = { selectedServiceType = type },
+                        label = { Text(type, fontSize = 10.sp) }
+                    )
+                }
+            }
+        }
+
+        if (selectedType == "PARKING") {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Tip parkinga:", fontSize = 12.sp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                parkingTypes.forEach { type ->
+                    FilterChip(
+                        selected = selectedParkingType == type,
+                        onClick = { selectedParkingType = type },
+                        label = { Text(type, fontSize = 10.sp) }
+                    )
+                }
             }
         }
 
@@ -156,6 +267,8 @@ fun ObjectListScreen(navController: NavController) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Nema objekata")
             }
+        } else if (showTable) {
+            ObjectTable(objects = filteredObjects, navController = navController)
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(filteredObjects) { obj ->
@@ -163,6 +276,47 @@ fun ObjectListScreen(navController: NavController) {
                         navController.navigate(Screen.ObjectDetail.createRoute(obj.id))
                     })
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ObjectTable(objects: List<MapObject>, navController: NavController) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .horizontalScroll(rememberScrollState())
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Naziv", fontWeight = FontWeight.Bold, modifier = Modifier.width(120.dp), fontSize = 12.sp)
+            Text("Tip", fontWeight = FontWeight.Bold, modifier = Modifier.width(80.dp), fontSize = 12.sp)
+            Text("Ocena", fontWeight = FontWeight.Bold, modifier = Modifier.width(60.dp), fontSize = 12.sp)
+            Text("Autor", fontWeight = FontWeight.Bold, modifier = Modifier.width(100.dp), fontSize = 12.sp)
+        }
+        HorizontalDivider()
+        LazyColumn {
+            items(objects) { obj ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            navController.navigate(Screen.ObjectDetail.createRoute(obj.id))
+                        }
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(obj.title, modifier = Modifier.width(120.dp), fontSize = 12.sp, maxLines = 1)
+                    Text(obj.type, modifier = Modifier.width(80.dp), fontSize = 12.sp)
+                    Text("%.1f".format(obj.rating), modifier = Modifier.width(60.dp), fontSize = 12.sp)
+                    Text(obj.authorName, modifier = Modifier.width(100.dp), fontSize = 12.sp, maxLines = 1)
+                }
+                HorizontalDivider()
             }
         }
     }

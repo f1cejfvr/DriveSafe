@@ -113,7 +113,7 @@ fun ObjectDetailScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Prosecna ocena: ${String.format(java.util.Locale.getDefault(), "%.1f", obj.rating)} (${obj.ratingCount} ocena)",
+            text = "Prosecna ocena: ${"%.1f".format(obj.rating)} (${obj.ratingCount} ocena)",
             fontSize = 14.sp
         )
 
@@ -171,8 +171,12 @@ fun ObjectDetailScreen(
                     )
                     val result = objectRepository.addRating(rating)
                     if (result.isSuccess) {
-                        userRepository.updateUserPoints(currentUser?.uid ?: "", 5)
-                        successMessage = "Ocena uspesno dodata! +5 poena"
+                        val pointsToAdd = if (comment.isNotBlank()) 10 else 5
+                        userRepository.updateUserPoints(currentUser?.uid ?: "", pointsToAdd)
+                        successMessage = if (comment.isNotBlank())
+                            "Ocena i komentar uspesno dodati! +10 poena"
+                        else
+                            "Ocena uspesno dodata! +5 poena"
                         errorMessage = ""
                         val updatedObj = objectRepository.getObject(objectId)
                         if (updatedObj.isSuccess) {

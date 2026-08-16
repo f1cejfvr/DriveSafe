@@ -10,12 +10,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.rmas.drivesafe.model.User
 import com.rmas.drivesafe.repository.UserRepository
 
 @Composable
-fun LeaderboardScreen(navController: NavController) {
+fun LeaderboardScreen() {
     val userRepository = remember { UserRepository() }
     var users by remember { mutableStateOf<List<User>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }

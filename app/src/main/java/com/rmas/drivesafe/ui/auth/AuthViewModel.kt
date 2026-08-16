@@ -74,8 +74,4 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
-
-    fun isLoggedIn(): Boolean {
-        return authRepository.isLoggedIn()
-    }
 }

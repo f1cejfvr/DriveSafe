@@ -127,16 +127,18 @@ fun MapScreen(navController: NavController) {
             )
         ) {
             currentLocation?.let {
+                val markerState = rememberUpdatedMarkerState(position = it)
                 Marker(
-                    state = MarkerState(position = it),
+                    state = markerState,
                     title = "Moja lokacija"
                 )
             }
             objects.forEach { obj ->
+                val markerState = rememberUpdatedMarkerState(
+                    position = LatLng(obj.latitude, obj.longitude)
+                )
                 Marker(
-                    state = MarkerState(
-                        position = LatLng(obj.latitude, obj.longitude)
-                    ),
+                    state = markerState,
                     title = obj.title,
                     snippet = obj.type
                 )

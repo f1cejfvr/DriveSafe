@@ -5,7 +5,6 @@ import com.google.firebase.firestore.Query
 import com.rmas.drivesafe.model.MapObject
 import com.rmas.drivesafe.model.Rating
 import kotlinx.coroutines.tasks.await
-import java.util.Date
 
 class ObjectRepository {
     private val db = FirebaseFirestore.getInstance()

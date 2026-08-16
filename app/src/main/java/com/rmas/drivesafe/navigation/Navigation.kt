@@ -61,7 +61,7 @@ fun AppNavigation(
             ObjectListScreen(navController)
         }
         composable(Screen.Leaderboard.route) {
-            LeaderboardScreen(navController)
+            LeaderboardScreen()
         }
         composable(Screen.Profile.route) {
             ProfileScreen(navController)

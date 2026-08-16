@@ -1,12 +1,6 @@
 package com.rmas.drivesafe.model
 
 import java.util.Date
-
-enum class ObjectType { EMERGENCY, DANGER, PARKING }
-enum class ServiceType { HOSPITAL, POLICE, FIRE, CAR_SERVICE }
-enum class DangerType { POTHOLE, SLIPPERY, POOR_VISIBILITY, ACCIDENT }
-enum class ParkingType { FREE, PAID, GARAGE }
-
 data class User(
     val id: String = "",
     val username: String = "",

@@ -202,7 +202,7 @@ fun ObjectCard(obj: MapObject, onClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Ocena: ${String.format(java.util.Locale.getDefault(), "%.1f", obj.rating)} (${obj.ratingCount})",
+                text = "Ocena: ${"%.1f".format(obj.rating)} (${obj.ratingCount})",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
